@@ -27,25 +27,9 @@ The browser only receives the public Supabase URL and publishable key. It never 
 npx serve .
 ```
 
-## Supabase setup
+## Supabase backend
 
-Deploy the function:
-
-```sh
-supabase functions deploy admin-api
-```
-
-No custom Supabase key secrets are required for the deployed Edge Function. Supabase automatically provides `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEYS`, and `SUPABASE_SECRET_KEYS` to functions.
-
-For local function development, add fallback values to `supabase/functions/.env` if needed:
-
-```sh
-SUPABASE_URL=...
-SUPABASE_PUBLISHABLE_KEY=...
-SUPABASE_SECRET_KEY=...
-```
-
-Google Sign-In must be enabled in Supabase Auth. Add the static admin URL to the allowed redirect URLs.
+Backend setup, migrations, Edge Function deployment, and auth-provider notes live in the main SimulaEdu repository under `supabase/README.md`.
 
 ## Current scope
 
