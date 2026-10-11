@@ -7,6 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const state = {
   appSlug: null,
   apps: [],
+  appsLoaded: false,
   content: null,
   editing: null,
   message: null,
@@ -139,6 +140,7 @@ async function boot() {
 
     state.content = null;
     state.apps = [];
+    state.appsLoaded = false;
     state.appSlug = null;
     render();
     if (session) loadApps();
@@ -155,6 +157,7 @@ async function loadApps() {
     try {
       const payload = await api('/apps');
       state.apps = payload.apps ?? [];
+      state.appsLoaded = true;
       state.appSlug = state.appSlug ?? state.apps[0]?.slug ?? null;
       if (state.appSlug) await loadContent();
       else render();
@@ -235,6 +238,7 @@ function resetAuthState() {
   state.session = null;
   state.content = null;
   state.apps = [];
+  state.appsLoaded = false;
   state.appSlug = null;
   state.message = null;
   state.editing = null;
@@ -273,6 +277,12 @@ function render() {
     return;
   }
 
+  if (state.appsLoaded && state.apps.length === 0) {
+    root.innerHTML = renderNoApps();
+    bindGlobalActions();
+    return;
+  }
+
   if (!state.content) {
     root.innerHTML = renderLoading();
     bindGlobalActions();
@@ -306,8 +316,25 @@ function renderLogin() {
       <div>
         <p class="eyebrow">SimulaEdu Admin</p>
         <h1>Entre com Google</h1>
-        <p class="muted">Somente emails cadastrados em <strong>app_editors</strong> conseguem editar apps.</p>
+        <p class="muted">Somente emails autorizados conseguem editar apps.</p>
         <button class="btn" data-action="login">Entrar com Google</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNoApps() {
+  return `
+    <section class="panel center-panel">
+      <div>
+        <p class="eyebrow">Sem acesso</p>
+        <h1>Nenhum app disponível</h1>
+        <p class="muted">O email <strong>${escapeHtml(state.session.user.email)}</strong> não tem acesso a nenhum app cadastrado.</p>
+        <p class="muted">Peça para um administrador liberar este email para o app correto.</p>
+        <div class="row" style="justify-content: center">
+          <button class="btn" data-action="retry-load">Verificar novamente</button>
+          <button class="btn secondary" data-action="logout">Sair</button>
+        </div>
       </div>
     </section>
   `;
@@ -750,7 +777,12 @@ function bindGlobalActions() {
       setMessage(error.message, true);
     }
   });
-  root.querySelector('[data-action="retry-load"]')?.addEventListener('click', () => { state.message = null; render(); loadApps(); });
+  root.querySelector('[data-action="retry-load"]')?.addEventListener('click', () => {
+    state.appsLoaded = false;
+    state.message = null;
+    render();
+    loadApps();
+  });
   root.querySelector('[data-action="publish"]')?.addEventListener('click', publishContent);
   root.querySelector('[data-action="dismiss-message"]')?.addEventListener('click', () => { state.message = null; render(); });
   root.querySelector('[data-action="cancel-edit"]')?.addEventListener('click', () => { state.editing = null; render(); });
