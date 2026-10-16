@@ -3,6 +3,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config.js';
 
 const root = document.querySelector('#app');
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const PUBLISHED_CONTENT_BUCKET = 'published-content';
 
 const state = {
   appSlug: null,
@@ -693,13 +694,17 @@ function renderPublications() {
 }
 
 function renderPublicationItem(version) {
+  const filename = `${state.appSlug}-content-v${version.version}.json`;
+  const objectPath = `${encodeURIComponent(state.appSlug)}/${version.version}.json`;
+  const downloadUrl = `${SUPABASE_URL}/storage/v1/object/public/${PUBLISHED_CONTENT_BUCKET}/${objectPath}?download=${encodeURIComponent(filename)}`;
+
   return `
     <div class="item">
       <div class="item-title">Versão ${version.version}</div>
       <div class="item-meta">Publicada em ${escapeHtml(formatDateTime(version.published_at))}</div>
       ${version.minimum_app_version ? `<div class="item-meta">Versão mínima do app: ${escapeHtml(version.minimum_app_version)}</div>` : ''}
       <div class="actions">
-        <button class="btn secondary" data-download-publication="${version.version}">Baixar</button>
+        <a class="btn secondary" href="${escapeHtml(downloadUrl)}">Baixar</a>
       </div>
     </div>
   `;
@@ -802,7 +807,6 @@ function bindGlobalActions() {
   root.querySelectorAll('[data-delete-exam-type]').forEach((button) => button.addEventListener('click', () => deleteResource('exam-types', button.dataset.deleteExamType, 'Excluir este tipo de prova?')));
   root.querySelectorAll('[data-delete-theme]').forEach((button) => button.addEventListener('click', () => deleteResource('themes', button.dataset.deleteTheme, 'Excluir esta matéria?')));
   root.querySelectorAll('[data-delete-question]').forEach((button) => button.addEventListener('click', () => deleteResource('questions', button.dataset.deleteQuestion, 'Excluir esta questão?')));
-  root.querySelectorAll('[data-download-publication]').forEach((button) => button.addEventListener('click', () => downloadPublication(button.dataset.downloadPublication)));
   root.querySelectorAll('[data-reorder-exam-type]').forEach((button) => button.addEventListener('click', () => reorderResource('exam-types', button.dataset.reorderExamType, button.dataset.direction)));
   root.querySelectorAll('[data-reorder-theme]').forEach((button) => button.addEventListener('click', () => reorderResource('themes', button.dataset.reorderTheme, button.dataset.direction)));
   root.querySelector('[data-action="filter-exam-type"]')?.addEventListener('change', (event) => {
@@ -963,24 +967,6 @@ async function reorderResource(resource, id, direction) {
   try {
     await api(`/apps/${state.appSlug}/${resource}/${id}/reorder`, { method: 'POST', body: JSON.stringify({ direction }) });
     await loadContent();
-  } catch (error) {
-    setMessage(error.message, true);
-  }
-}
-
-async function downloadPublication(version) {
-  try {
-    const payload = await api(`/apps/${state.appSlug}/publications/${version}`);
-    const blob = new Blob([`${JSON.stringify(payload.content, null, 2)}\n`], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = `${state.appSlug}-content-v${version}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   } catch (error) {
     setMessage(error.message, true);
   }
